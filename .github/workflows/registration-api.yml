@@ -1,6 +1,15 @@
 name: Registration API Regression
 
 on:
+  pull_request:
+    branches:
+      - development
+    paths:
+      - 'helpers/**'
+      - 'tests/api/auth/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/registration-api.yml'
   workflow_dispatch:
     inputs:
       api_base_url:
@@ -18,8 +27,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: registration-api-${{ inputs.api_base_url }}
-  cancel-in-progress: false
+  group: registration-api-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validation:
@@ -27,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      API_BASE_URL: ${{ inputs.api_base_url }}
+      API_BASE_URL: ${{ inputs.api_base_url || 'https://truck-life-simulator-api.onrender.com' }}
 
     steps:
       - name: Checkout
@@ -62,7 +71,7 @@ jobs:
   live-registration:
     name: Registration live happy path
     needs: validation
-    if: ${{ inputs.confirm_live_account_creation }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_live_account_creation }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
