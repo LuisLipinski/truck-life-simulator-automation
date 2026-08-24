@@ -20,6 +20,7 @@
     "test:registration:live": "playwright test --project=api tests/api/auth/registration.live.spec.ts",
     "test:registration:isolated": "playwright test --project=api tests/api/auth/registration.isolated.spec.ts",
     "test:ui": "playwright test --project=chromium-ui",
+    "test:ui:smoke": "playwright test --project=chromium-ui tests/ui/smoke/home.spec.ts",
     "test:e2e": "playwright test --project=chromium-e2e",
     "lint": "npx --yes oxlint@1.80.0 --deny-warnings .",
     "typecheck": "tsc --noEmit",
