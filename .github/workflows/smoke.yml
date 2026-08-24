@@ -1,0 +1,58 @@
+name: Smoke Tests
+
+on:
+  pull_request:
+    branches:
+      - development
+      - master
+  push:
+    branches:
+      - development
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-smoke:
+    name: API Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      API_BASE_URL: https://truck-life-simulator-api.onrender.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.19.0
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm install --no-audit --fund=false
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run API smoke
+        run: npm run test:smoke
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-smoke-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 14
