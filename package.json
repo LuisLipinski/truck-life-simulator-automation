@@ -12,7 +12,7 @@
     "test:smoke": "playwright test --project=api --grep @smoke",
     "test:api": "playwright test --project=api --grep-invert \"@rate-limited-live|@isolated|@authenticated-live\"",
     "test:api:protocol-safe": "playwright test --project=api tests/api/protocol/http.robustness.spec.ts tests/api/security/cors.spec.ts tests/api/observability/correlation-id.spec.ts",
-    "test:auth:safe": "playwright test --project=api tests/api/account/me.negative.spec.ts tests/api/auth/csrf.public.spec.ts tests/api/auth/login.protocol.spec.ts tests/api/auth/session-security.spec.ts",
+    "test:auth:safe": "playwright test --project=api tests/api/account/me.negative.spec.ts tests/api/auth/csrf.public.spec.ts tests/api/auth/login.protocol.spec.ts tests/api/auth/session-security.spec.ts tests/api/auth/refresh-token-negative.spec.ts",
     "test:auth:authenticated-live": "playwright test --project=api tests/api/auth/authenticated-session.live.spec.ts",
     "test:login:live-negative": "playwright test --project=api tests/api/auth/login.live-negative.spec.ts",
     "test:login:isolated": "playwright test --project=api tests/api/auth/login.isolated.spec.ts",
