@@ -1,9 +1,9 @@
 name: Generate dependency lockfile
 
 on:
-  push:
+  pull_request:
     branches:
-      - feature/automation-foundation
+      - development
 
 permissions:
   contents: read
