@@ -8,7 +8,7 @@ import {
 type InvalidRegistrationCase = {
   id: string;
   title: string;
-  payload: Record<string, unknown>;
+  payload: unknown;
   sensitiveValue?: string;
 };
 
