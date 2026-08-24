@@ -1,9 +1,5 @@
-import {
-  expect,
-  test as base,
-  type APIRequestContext,
-  type APIResponse,
-} from '@playwright/test';
+import type { APIRequestContext, APIResponse } from '@playwright/test';
+import { expect, test as base } from './api-test.js';
 import { ApiClient } from '../helpers/api-client.js';
 import { frontendOrigin } from '../helpers/session-security.js';
 
@@ -135,4 +131,4 @@ export const test = base.extend<AuthenticatedFixtures>({
   },
 });
 
-export { expect } from '@playwright/test';
+export { expect };

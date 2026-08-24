@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../../fixtures/api-test.js';
 
 test.describe('API readiness @api @smoke @p0', () => {
   test('AUTO-002 | E2E-01 | readiness deve responder UP', async ({ request }) => {

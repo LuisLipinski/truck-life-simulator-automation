@@ -25,42 +25,42 @@ Cobrir API, frontend, E2E, regressão, acessibilidade e segurança automatizáve
 
 Os endereços podem ser sobrescritos por `API_BASE_URL` e `FRONTEND_BASE_URL` sem alteração do código.
 
+## Proteção contra cold start do Render
+
+Todos os testes de API usam a fixture-base `fixtures/api-test.ts`. Antes de cada cenário, ela consulta `GET /actuator/health/readiness` e só libera o teste quando a API responder HTTP 200 com `status: UP`.
+
+A estratégia atual usa até 6 tentativas, com timeout de 20 segundos por chamada e intervalo de 5 segundos entre tentativas. Timeout, falha de conexão e respostas de indisponibilidade são tratados como ambiente ainda não pronto. Se o readiness não ficar saudável dentro do limite, o cenário falha como indisponibilidade do ambiente em vez de começar com a API dormindo.
+
+Depois que o Render está acordado, o custo normal desse `beforeEach` é apenas uma chamada rápida de readiness. A checagem não altera as expectativas funcionais do cenário e não transforma respostas 4xx/5xx do endpoint sob teste em sucesso.
+
 ## Estrutura atual
 
 ```text
 config/
   environment.ts
+fixtures/
+  api-test.ts
+  authenticated-api.ts
 helpers/
   api-client.ts
+  api-readiness.ts
   problem-details.ts
   session-security.ts
   test-data-factory.ts
 tests/
   api/
     account/
-      me.negative.spec.ts
     auth/
-      csrf.public.spec.ts
-      login.protocol.spec.ts
-      login.live-negative.spec.ts
-      login.isolated.spec.ts
-      registration.validation.spec.ts
-      registration.live.spec.ts
-      registration.isolated.spec.ts
-      session-security.spec.ts
     docs/
-      openapi.spec.ts
     health/
-      readiness.spec.ts
+    observability/
+    protocol/
+    security/
 .github/
   workflows/
-    auth-api.yml
-    quality.yml
-    registration-api.yml
-    smoke.yml
 ```
 
-As áreas de UI, E2E, fixtures de autenticação, schemas e novas camadas de segurança serão adicionadas conforme o roadmap de automação evoluir.
+As áreas de UI, E2E, acessibilidade e segurança serão ampliadas conforme o roadmap de automação evoluir.
 
 ## Instalação local
 
@@ -88,21 +88,19 @@ Lint:
 npm run lint
 ```
 
-O script usa `oxlint@1.80.0` com versão exata e `--deny-warnings`; qualquer warning ou erro faz o gate falhar.
-
 Type check:
 
 ```bash
 npm run typecheck
 ```
 
-Lint + typecheck:
+Gate completo de qualidade:
 
 ```bash
 npm run quality
 ```
 
-O lint e o typecheck são mantidos como verificações separadas: Oxlint analisa regras estáticas de JavaScript/TypeScript e o TypeScript continua sendo a fonte de verdade para validação de tipos com `tsc --noEmit`.
+O lint usa Oxlint `1.80.0` com versão exata e `--deny-warnings`. O TypeScript é validado separadamente por `tsc --noEmit`.
 
 ## Execução
 
@@ -112,16 +110,22 @@ Smoke de API:
 npm run test:smoke
 ```
 
-API segura para o ambiente compartilhado, excluindo cenários que criam múltiplas contas ou dependem de rate limit controlado:
+API segura para o ambiente compartilhado, excluindo cenários que criam múltiplas contas, dependem de login real ou exigem ambiente isolado:
 
 ```bash
 npm run test:api
 ```
 
-Regressão segura de autenticação, Minha Conta, Origin e CSRF:
+Regressão segura de autenticação/sessão:
 
 ```bash
 npm run test:auth:safe
+```
+
+Regressão segura de HTTP, CORS e observabilidade:
+
+```bash
+npm run test:api:protocol-safe
 ```
 
 Validações negativas de cadastro:
@@ -136,13 +140,23 @@ Cadastro real no ambiente selecionado é **opt-in**:
 RUN_RATE_LIMITED_TESTS=true npm run test:registration:live
 ```
 
-Uma tentativa real de login inválido também é **opt-in** para não consumir o rate limit automaticamente:
+A suíte completa de limites válidos, duplicidade e concorrência só deve ser executada em ambiente isolado:
 
 ```bash
-RUN_RATE_LIMITED_TESTS=true npm run test:login:live-negative
+RUN_ISOLATED_REGISTRATION_TESTS=true npm run test:registration:isolated
 ```
 
-As suítes de limites/concorrência que exigem ambiente isolado possuem scripts próprios e não entram na regressão segura padrão.
+Login negativo real é opt-in:
+
+```bash
+RUN_LOGIN_RATE_LIMITED_TESTS=true npm run test:login:live-negative
+```
+
+Fluxo autenticado exige conta dedicada em variáveis de ambiente e opt-in explícito:
+
+```bash
+RUN_AUTHENTICATED_TESTS=true npm run test:auth:authenticated-live
+```
 
 Relatório HTML após uma execução:
 
@@ -152,14 +166,14 @@ npm run report
 
 ## Proteção contra rate limit
 
-Os endpoints de identidade possuem proteções de rate limit no ambiente publicado. Por isso:
+Os endpoints de identidade possuem rate limits no ambiente publicado. Por isso:
 
-- `npm run test:api` exclui `@rate-limited-live` e `@isolated`;
-- o happy path que cria uma conta exige `RUN_RATE_LIMITED_TESTS=true`;
-- a tentativa real de login inválido exige opt-in explícito;
-- testes com vários cadastros ou limites extensos exigem ambiente isolado;
-- os workflows que podem consumir limites mantêm as operações opt-in separadas da regressão automática;
-- nunca executar flood, stress ou tentativas de burlar o rate limit do Render compartilhado.
+- `npm run test:api` exclui `@rate-limited-live`, `@isolated` e `@authenticated-live`;
+- criação de conta real exige opt-in;
+- login real exige opt-in;
+- testes autenticados exigem opt-in e conta dedicada;
+- testes com vários cadastros exigem ambiente isolado;
+- nunca executar flood, stress ou tentativas de burlar os rate limits do Render compartilhado.
 
 ## Tags
 
@@ -172,7 +186,7 @@ Os testes são classificados por domínio e risco, por exemplo:
 - `@e2e`
 - `@security`
 - `@registration`
-- `@session`
+- `@authenticated-live`
 - `@rate-limited-live`
 - `@isolated`
 - `@p0`, `@p1`, `@p2`
@@ -182,44 +196,25 @@ Os testes são classificados por domínio e risco, por exemplo:
 - `AUTO-002 | E2E-01`: readiness `200` + `status: UP`.
 - `AUTO-017 | E2E-02`: OpenAPI 3.x e rotas da P2 publicadas.
 - `AUTO-018 | QA-API-003`: Swagger UI acessível.
-- `QA-REG-001`: cadastro válido, opt-in no ambiente publicado.
-- `QA-REG-003`, `006`, `007`, `012`, `014`, `015`, `016`, `019`, `022`: validações negativas de cadastro automatizadas e executadas.
-- `QA-REG-004`, `005`, `017`, `018`, `020`, `021`, `025`, `026`: automação preparada para ambiente isolado.
-- `QA-ME-002`, `003`, `004`: autenticação negativa de `/me`.
-- `QA-SES-001`: emissão e propriedades do CSRF público.
-- `QA-SES-008`, `009`, `010`, `011`, `012`: barreiras de CSRF/Origin do refresh.
-- `QA-OUT-004`, `005`: idempotência e barreiras de CSRF/Origin do logout.
-- `QA-HTTP-004`: media type inválido no login; este teste encontrou um defeito real de HTTP 500 e confirmou a correção para 415 após o deploy.
-
-Os testes de readiness/Swagger aceitam timeout maior porque o Render pode estar em cold start. As demais regressões mantêm expectativas funcionais estritas e retries controlados no CI.
+- validações negativas de cadastro P1.
+- checks seguros de access token, CSRF, Origin e logout.
+- `QA-HTTP-001/002/003`: 404/405 controlados; a automação encontrou respostas 500 e a correção foi feita no backend PR #19.
+- `QA-HTTP-004`: media type inválido; a automação encontrou HTTP 500 e a correção foi feita no backend PR #18.
+- `QA-CORS-001` a `005`: contrato CORS básico.
+- `QA-OBS-003` a `006`: correlation ID.
+- fixture autenticada preparada para login, `/me`, refresh/rotação e logout, com primeira execução ainda opt-in.
 
 ## CI
 
-O workflow `Code Quality` executa em PRs e pushes de `development` e `master`, além de execução manual. Ele não acessa o Render e valida:
+Os workflows usam Node.js 24.19.0, `npm ci` e TypeScript typecheck. O workflow `Code Quality` roda Oxlint + typecheck sem depender do Render.
 
-1. `npm ci` com o lockfile;
-2. Oxlint com warnings tratados como falha;
-3. TypeScript com `tsc --noEmit`.
-
-O workflow `Smoke Tests` executa em PRs e pushes de `development` e `master` e também manualmente. Ele:
-
-1. prepara Node.js 24.19.0;
-2. instala exatamente as dependências do lockfile com `npm ci`;
-3. executa o TypeScript type-check;
-4. executa o smoke de API;
-5. publica relatórios Playwright/JUnit como artefato.
-
-`Auth API Safe Regression` cobre somente casos seguros por padrão. A tentativa real de login inválido permanece separada e opt-in.
-
-`Registration API Regression` executa automaticamente as validações negativas e mantém a criação real de conta atrás de confirmação explícita.
-
-No CI usamos apenas um worker inicialmente para evitar gerar concorrência desnecessária contra o ambiente compartilhado do Render.
+As suítes funcionais publicam relatório Playwright/JUnit como artefato quando apropriado. No CI usamos apenas um worker inicialmente para evitar concorrência desnecessária contra o ambiente compartilhado do Render.
 
 ## Estratégia de branches
 
 - `master`: linha estável;
 - `development`: integração validável;
-- `feature/*` e `chore/*`: implementação isolada antes do merge em `development`.
+- `feature/*` / `chore/*`: implementação isolada antes do merge em `development`.
 
 ## Segurança
 
