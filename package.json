@@ -19,7 +19,9 @@
     "test:registration:isolated": "playwright test --project=api tests/api/auth/registration.isolated.spec.ts",
     "test:ui": "playwright test --project=chromium-ui",
     "test:e2e": "playwright test --project=chromium-e2e",
+    "lint": "npx --yes oxlint@1.80.0 --deny-warnings .",
     "typecheck": "tsc --noEmit",
+    "quality": "npm run lint && npm run typecheck",
     "report": "playwright show-report"
   },
   "devDependencies": {
