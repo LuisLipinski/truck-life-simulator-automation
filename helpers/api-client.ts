@@ -2,11 +2,19 @@ import type { APIRequestContext, APIResponse } from '@playwright/test';
 
 const DEFAULT_API_TIMEOUT_MS = 90_000;
 
+type FetchOptions = NonNullable<Parameters<APIRequestContext['fetch']>[1]>;
 type GetOptions = NonNullable<Parameters<APIRequestContext['get']>[1]>;
 type PostOptions = NonNullable<Parameters<APIRequestContext['post']>[1]>;
 
 export class ApiClient {
   public constructor(private readonly request: APIRequestContext) {}
+
+  public fetch(path: string, options: FetchOptions = {}): Promise<APIResponse> {
+    return this.request.fetch(path, {
+      timeout: DEFAULT_API_TIMEOUT_MS,
+      ...options,
+    });
+  }
 
   public get(path: string, options: GetOptions = {}): Promise<APIResponse> {
     return this.request.get(path, {
