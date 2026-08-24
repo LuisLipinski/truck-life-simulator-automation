@@ -1,0 +1,27 @@
+{
+  "name": "truck-life-simulator-automation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Black-box test automation for Truck Life Simulator",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test --project=api --grep @smoke",
+    "test:api": "playwright test --project=api",
+    "test:ui": "playwright test --project=chromium-ui",
+    "test:e2e": "playwright test --project=chromium-e2e",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@faker-js/faker": "10.6.0",
+    "@playwright/test": "1.62.1",
+    "@types/node": "24.13.3",
+    "ajv": "8.20.0",
+    "typescript": "7.0.2"
+  }
+}
