@@ -1,0 +1,55 @@
+name: Authenticated Session Regression
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_authenticated_session_test:
+        description: Run one real authenticated session lifecycle using the dedicated test account
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: authenticated-session-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  authenticated-session:
+    name: Authenticated login, me, refresh and logout
+    if: ${{ inputs.confirm_authenticated_session_test }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      API_BASE_URL: https://truck-life-simulator-api.onrender.com
+      FRONTEND_BASE_URL: https://luislipinski.github.io/truck-life-simulator
+      RUN_AUTHENTICATED_TESTS: 'true'
+      E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+      E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.19.0
+          package-manager-cache: false
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --fund=false
+
+      - name: Validate dedicated test account configuration
+        shell: bash
+        run: |
+          if [[ -z "$E2E_TEST_EMAIL" || -z "$E2E_TEST_PASSWORD" ]]; then
+            echo "::error::Configure E2E_TEST_EMAIL and E2E_TEST_PASSWORD as GitHub Actions secrets before running this workflow."
+            exit 1
+          fi
+
+      - name: Run authenticated session lifecycle
+        run: npm run test:auth:authenticated-live
