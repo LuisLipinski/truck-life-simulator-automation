@@ -18,7 +18,7 @@ test.describe('Login protocol validation @api @login @security @p1', () => {
     expect(response.headers()['set-cookie']).toBeUndefined();
   });
 
-  test('QA-HTTP-004 | text/plain no login deve ser rejeitado sem criar sessão', async ({
+  test('QA-HTTP-004 | text/plain no login deve retornar Problem Details 415 sem criar sessão', async ({
     request,
   }) => {
     const api = new ApiClient(request);
@@ -29,12 +29,7 @@ test.describe('Login protocol validation @api @login @security @p1', () => {
       },
     });
 
-    expect(response.status()).toBe(415);
-    expect(api.correlationId(response)).toBeTruthy();
+    await expectProblemDetails(api, response, 415, 'UNSUPPORTED_MEDIA_TYPE');
     expect(response.headers()['set-cookie']).toBeUndefined();
-
-    const body = await api.bodyText(response);
-    expect(body).not.toContain('java.');
-    expect(body).not.toContain('org.springframework');
   });
 });
