@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../../fixtures/api-test.js';
 import { ApiClient } from '../../../helpers/api-client.js';
 
 type CsrfResponse = {
