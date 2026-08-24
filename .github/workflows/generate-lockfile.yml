@@ -1,0 +1,35 @@
+name: Generate dependency lockfile
+
+on:
+  push:
+    branches:
+      - feature/automation-foundation
+
+permissions:
+  contents: read
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.19.0
+          package-manager-cache: false
+
+      - name: Generate package-lock
+        run: npm install --package-lock-only --no-audit --fund=false
+
+      - name: Upload package-lock
+        uses: actions/upload-artifact@v6
+        with:
+          name: generated-package-lock
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 1
