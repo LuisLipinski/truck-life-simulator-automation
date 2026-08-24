@@ -126,15 +126,11 @@ export const test = base.extend<AuthenticatedFixtures>({
         Boolean(await cookieValue(request, REFRESH_COOKIE_NAME)),
     };
 
-    try {
-      await use(session);
-    } finally {
-      if (!loggedOut) {
-        const cleanup = await session.logout();
-        if (cleanup.status() !== 204) {
-          throw new Error(`Authenticated session cleanup failed with HTTP ${cleanup.status()}`);
-        }
-      }
+    await use(session);
+
+    if (!loggedOut) {
+      const cleanup = await session.logout();
+      expect(cleanup.status()).toBe(204);
     }
   },
 });
