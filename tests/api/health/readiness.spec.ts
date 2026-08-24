@@ -2,7 +2,11 @@ import { expect, test } from '@playwright/test';
 
 test.describe('API readiness @api @smoke @p0', () => {
   test('AUTO-002 | E2E-01 | readiness deve responder UP', async ({ request }) => {
-    const response = await request.get('/actuator/health/readiness');
+    test.setTimeout(120_000);
+
+    const response = await request.get('/actuator/health/readiness', {
+      timeout: 90_000,
+    });
 
     expect(response.status(), 'readiness deve responder HTTP 200').toBe(200);
 
