@@ -50,9 +50,13 @@ As pastas ainda sem testes serão adicionadas conforme o roadmap de automação 
 
 Requer Node.js 24 LTS.
 
+Para reproduzir exatamente as dependências versionadas:
+
 ```bash
-npm install
+npm ci
 ```
+
+Use `npm install` apenas quando for necessário adicionar ou atualizar dependências e atualizar o `package-lock.json`.
 
 Para testes UI, instale os navegadores quando começarmos essa camada:
 
@@ -105,12 +109,14 @@ Os testes serão classificados por domínio e risco, por exemplo:
 - HTTP `200`;
 - corpo JSON com `status: "UP"`.
 
+O teste aceita até 90 segundos para a requisição de readiness porque o Render pode estar em cold start, mas a expectativa funcional continua estrita.
+
 ## CI
 
 O workflow `Smoke Tests` executa em PRs e pushes de `development` e `master` e também manualmente. Ele:
 
 1. prepara Node.js 24.19.0;
-2. instala as dependências;
+2. instala exatamente as dependências do lockfile com `npm ci`;
 3. executa o TypeScript type-check;
 4. executa o smoke de API;
 5. publica relatórios Playwright/JUnit como artefato.
