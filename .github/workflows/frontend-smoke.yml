@@ -1,0 +1,53 @@
+name: Frontend Smoke
+
+on:
+  pull_request:
+    branches:
+      - development
+      - master
+  push:
+    branches:
+      - development
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-smoke:
+    name: Published frontend smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.19.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --fund=false
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run published frontend smoke
+        run: npm run test:ui:smoke
+
+      - name: Upload frontend smoke report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: frontend-smoke-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
