@@ -15,14 +15,20 @@ export class ApiClient {
     });
   }
 
+  public post(path: string, options: PostOptions = {}): Promise<APIResponse> {
+    return this.request.post(path, {
+      timeout: DEFAULT_API_TIMEOUT_MS,
+      ...options,
+    });
+  }
+
   public postJson(
     path: string,
     data: unknown,
     options: PostOptions = {},
   ): Promise<APIResponse> {
-    return this.request.post(path, {
+    return this.post(path, {
       data,
-      timeout: DEFAULT_API_TIMEOUT_MS,
       ...options,
     });
   }
