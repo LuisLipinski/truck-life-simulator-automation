@@ -37,8 +37,8 @@ jobs:
           node-version: 24.19.0
           package-manager-cache: false
 
-      - name: Install dependencies
-        run: npm install --no-audit --fund=false
+      - name: Install locked dependencies
+        run: npm ci --no-audit --fund=false
 
       - name: Type check
         run: npm run typecheck
