@@ -1,15 +1,14 @@
-import type {
-  APIRequestContext,
-  APIRequestOptions,
-  APIResponse,
-} from '@playwright/test';
+import type { APIRequestContext, APIResponse } from '@playwright/test';
 
 const DEFAULT_API_TIMEOUT_MS = 90_000;
+
+type GetOptions = NonNullable<Parameters<APIRequestContext['get']>[1]>;
+type PostOptions = NonNullable<Parameters<APIRequestContext['post']>[1]>;
 
 export class ApiClient {
   public constructor(private readonly request: APIRequestContext) {}
 
-  public get(path: string, options: APIRequestOptions = {}): Promise<APIResponse> {
+  public get(path: string, options: GetOptions = {}): Promise<APIResponse> {
     return this.request.get(path, {
       timeout: DEFAULT_API_TIMEOUT_MS,
       ...options,
@@ -19,7 +18,7 @@ export class ApiClient {
   public postJson(
     path: string,
     data: unknown,
-    options: APIRequestOptions = {},
+    options: PostOptions = {},
   ): Promise<APIResponse> {
     return this.request.post(path, {
       data,
