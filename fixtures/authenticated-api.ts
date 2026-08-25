@@ -22,6 +22,10 @@ export type AuthenticatedApiSession = {
   refresh: () => Promise<{ response: APIResponse; rotated: boolean }>;
   reusePreviousRefresh: () => Promise<APIResponse>;
   refreshCurrentAfterReuse: () => Promise<APIResponse>;
+  changePasswordFromConfiguredPassword: (newPassword: string) => Promise<APIResponse>;
+  restoreConfiguredPassword: (currentPassword: string) => Promise<APIResponse>;
+  loginWithConfiguredPassword: () => Promise<APIResponse>;
+  loginWithPassword: (candidatePassword: string) => Promise<APIResponse>;
   logout: () => Promise<APIResponse>;
   hasRefreshCookie: () => Promise<boolean>;
 };
@@ -91,6 +95,21 @@ export const test = base.extend<AuthenticatedFixtures>({
 
     requireSessionToken(currentRefreshToken, 'Refresh cookie is missing after login');
 
+    const authenticatedPasswordChange = (
+      currentPassword: string,
+      newPassword: string,
+    ): Promise<APIResponse> => api.postJson(
+      '/api/v1/me/change-password',
+      { currentPassword, newPassword },
+      { headers: { Authorization: `Bearer ${currentAccessToken}` } },
+    );
+
+    const loginWithPassword = (candidatePassword: string): Promise<APIResponse> =>
+      api.postJson('/api/v1/auth/login', {
+        email,
+        password: candidatePassword,
+      });
+
     const postRefreshWithExplicitToken = async (refreshToken: string): Promise<APIResponse> => {
       const csrfCookie = requireSessionToken(
         await cookieValue(request, CSRF_COOKIE_NAME),
@@ -155,6 +174,12 @@ export const test = base.extend<AuthenticatedFixtures>({
         );
         return postRefreshWithExplicitToken(current);
       },
+      changePasswordFromConfiguredPassword: (newPassword) =>
+        authenticatedPasswordChange(password, newPassword),
+      restoreConfiguredPassword: (currentPassword) =>
+        authenticatedPasswordChange(currentPassword, password),
+      loginWithConfiguredPassword: () => loginWithPassword(password),
+      loginWithPassword,
       logout: async () => {
         const response = await api.post('/api/v1/auth/logout', {
           headers: {
