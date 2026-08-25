@@ -1,0 +1,59 @@
+name: API Protocol Safe Regression
+
+on:
+  pull_request:
+    branches:
+      - development
+      - master
+  push:
+    branches:
+      - development
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-protocol-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-protocol:
+    name: HTTP, CORS and observability
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      API_BASE_URL: https://truck-life-simulator-api.onrender.com
+      FRONTEND_BASE_URL: https://luislipinski.github.io/truck-life-simulator
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.19.0
+          package-manager-cache: false
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --fund=false
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run safe API protocol regression
+        run: npm run test:api:protocol-safe
+
+      - name: Upload protocol report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: api-protocol-safe-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 14

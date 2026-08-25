@@ -1,0 +1,106 @@
+name: Registration API Regression
+
+on:
+  pull_request:
+    branches:
+      - development
+    paths:
+      - 'helpers/**'
+      - 'tests/api/auth/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/registration-api.yml'
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: API base URL to test
+        required: true
+        default: https://truck-life-simulator-api.onrender.com
+        type: string
+      confirm_live_account_creation:
+        description: Allow one real pending account to be created in the selected environment
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: registration-api-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validation:
+    name: Registration validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      API_BASE_URL: ${{ inputs.api_base_url || 'https://truck-life-simulator-api.onrender.com' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.19.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --fund=false
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run registration validation
+        run: npm run test:registration:validation
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: registration-validation-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  live-registration:
+    name: Registration live happy path
+    needs: validation
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_live_account_creation }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      API_BASE_URL: ${{ inputs.api_base_url }}
+      RUN_RATE_LIMITED_TESTS: 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.19.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --fund=false
+
+      - name: Run one live registration
+        run: npm run test:registration:live
+
+      - name: Upload live registration report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: registration-live-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 14

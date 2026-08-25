@@ -1,0 +1,38 @@
+{
+  "name": "truck-life-simulator-automation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Black-box test automation for Truck Life Simulator",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test --project=api --grep @smoke",
+    "test:api": "playwright test --project=api --grep-invert \"@rate-limited-live|@isolated|@authenticated-live\"",
+    "test:api:protocol-safe": "playwright test --project=api tests/api/protocol/http.robustness.spec.ts tests/api/security/cors.spec.ts tests/api/observability/correlation-id.spec.ts",
+    "test:auth:safe": "playwright test --project=api tests/api/account/me.negative.spec.ts tests/api/auth/csrf.public.spec.ts tests/api/auth/login.protocol.spec.ts tests/api/auth/session-security.spec.ts tests/api/auth/refresh-token-negative.spec.ts",
+    "test:auth:authenticated-live": "playwright test --project=api tests/api/auth/authenticated-session.live.spec.ts",
+    "test:login:live-negative": "playwright test --project=api tests/api/auth/login.live-negative.spec.ts",
+    "test:login:isolated": "playwright test --project=api tests/api/auth/login.isolated.spec.ts",
+    "test:registration:validation": "playwright test --project=api tests/api/auth/registration.validation.spec.ts",
+    "test:registration:live": "playwright test --project=api tests/api/auth/registration.live.spec.ts",
+    "test:registration:isolated": "playwright test --project=api tests/api/auth/registration.isolated.spec.ts",
+    "test:ui": "playwright test --project=chromium-ui",
+    "test:ui:smoke": "playwright test --project=chromium-ui tests/ui/smoke/home.spec.ts",
+    "test:e2e": "playwright test --project=chromium-e2e",
+    "lint": "npx --yes oxlint@1.80.0 --deny-warnings .",
+    "typecheck": "tsc --noEmit",
+    "quality": "npm run lint && npm run typecheck",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@faker-js/faker": "10.6.0",
+    "@playwright/test": "1.62.1",
+    "@types/node": "24.13.3",
+    "ajv": "8.20.0",
+    "typescript": "7.0.2"
+  }
+}
