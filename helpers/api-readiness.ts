@@ -1,7 +1,7 @@
 import type { APIRequestContext } from '@playwright/test';
 
 const READINESS_PATH = '/actuator/health/readiness';
-const READINESS_ATTEMPTS = 6;
+const READINESS_ATTEMPTS = 10;
 const READINESS_REQUEST_TIMEOUT_MS = 20_000;
 const READINESS_RETRY_DELAY_MS = 5_000;
 
