@@ -24,6 +24,7 @@ export type AuthenticatedApiSession = {
   refreshCurrentAfterReuse: () => Promise<APIResponse>;
   changePasswordFromConfiguredPassword: (newPassword: string) => Promise<APIResponse>;
   restoreConfiguredPassword: (currentPassword: string) => Promise<APIResponse>;
+  loginWithConfiguredPassword: () => Promise<APIResponse>;
   loginWithPassword: (candidatePassword: string) => Promise<APIResponse>;
   logout: () => Promise<APIResponse>;
   hasRefreshCookie: () => Promise<boolean>;
@@ -103,6 +104,12 @@ export const test = base.extend<AuthenticatedFixtures>({
       { headers: { Authorization: `Bearer ${currentAccessToken}` } },
     );
 
+    const loginWithPassword = (candidatePassword: string): Promise<APIResponse> =>
+      api.postJson('/api/v1/auth/login', {
+        email,
+        password: candidatePassword,
+      });
+
     const postRefreshWithExplicitToken = async (refreshToken: string): Promise<APIResponse> => {
       const csrfCookie = requireSessionToken(
         await cookieValue(request, CSRF_COOKIE_NAME),
@@ -171,11 +178,8 @@ export const test = base.extend<AuthenticatedFixtures>({
         authenticatedPasswordChange(password, newPassword),
       restoreConfiguredPassword: (currentPassword) =>
         authenticatedPasswordChange(currentPassword, password),
-      loginWithPassword: (candidatePassword) =>
-        api.postJson('/api/v1/auth/login', {
-          email,
-          password: candidatePassword,
-        }),
+      loginWithConfiguredPassword: () => loginWithPassword(password),
+      loginWithPassword,
       logout: async () => {
         const response = await api.post('/api/v1/auth/logout', {
           headers: {
