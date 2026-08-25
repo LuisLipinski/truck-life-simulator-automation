@@ -20,6 +20,8 @@ export type AuthenticatedApiSession = {
   expiresIn: number;
   me: () => Promise<APIResponse>;
   refresh: () => Promise<{ response: APIResponse; rotated: boolean }>;
+  reusePreviousRefresh: () => Promise<APIResponse>;
+  refreshCurrentAfterReuse: () => Promise<APIResponse>;
   logout: () => Promise<APIResponse>;
   hasRefreshCookie: () => Promise<boolean>;
 };
@@ -29,6 +31,7 @@ type AuthenticatedFixtures = {
 };
 
 const REFRESH_COOKIE_NAME = 'TLS_REFRESH_TOKEN';
+const CSRF_COOKIE_NAME = 'TLS_CSRF_TOKEN';
 
 function requiredSecret(name: 'E2E_TEST_EMAIL' | 'E2E_TEST_PASSWORD'): string {
   const value = process.env[name];
@@ -44,6 +47,17 @@ async function cookieValue(
 ): Promise<string | undefined> {
   const state = await request.storageState();
   return state.cookies.find((cookie) => cookie.name === cookieName)?.value;
+}
+
+function requireSessionToken(value: string | undefined, message: string): string {
+  if (!value) {
+    throw new Error(message);
+  }
+  return value;
+}
+
+function sessionCookieHeader(refreshToken: string, csrfToken: string): string {
+  return `${REFRESH_COOKIE_NAME}=${refreshToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`;
 }
 
 export const test = base.extend<AuthenticatedFixtures>({
@@ -71,7 +85,26 @@ export const test = base.extend<AuthenticatedFixtures>({
     expect(csrf.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
 
     let currentAccessToken = login.accessToken;
+    let previousRefreshToken: string | undefined;
+    let currentRefreshToken = await cookieValue(request, REFRESH_COOKIE_NAME);
     let loggedOut = false;
+
+    requireSessionToken(currentRefreshToken, 'Refresh cookie is missing after login');
+
+    const postRefreshWithExplicitToken = async (refreshToken: string): Promise<APIResponse> => {
+      const csrfCookie = requireSessionToken(
+        await cookieValue(request, CSRF_COOKIE_NAME),
+        'CSRF cookie is missing before refresh',
+      );
+
+      return api.post('/api/v1/auth/refresh', {
+        headers: {
+          Origin: frontendOrigin,
+          [csrf.headerName]: csrf.token,
+          Cookie: sessionCookieHeader(refreshToken, csrfCookie),
+        },
+      });
+    };
 
     const session: AuthenticatedApiSession = {
       api,
@@ -82,10 +115,10 @@ export const test = base.extend<AuthenticatedFixtures>({
           headers: { Authorization: `Bearer ${currentAccessToken}` },
         }),
       refresh: async () => {
-        const before = await cookieValue(request, REFRESH_COOKIE_NAME);
-        if (!before) {
-          throw new Error('Refresh cookie is missing before rotation');
-        }
+        const before = requireSessionToken(
+          await cookieValue(request, REFRESH_COOKIE_NAME),
+          'Refresh cookie is missing before rotation',
+        );
 
         const response = await api.post('/api/v1/auth/refresh', {
           headers: {
@@ -94,17 +127,33 @@ export const test = base.extend<AuthenticatedFixtures>({
           },
         });
 
+        const after = await cookieValue(request, REFRESH_COOKIE_NAME);
         if (response.status() === 200) {
           const refreshed = await api.json<AccessTokenResponse>(response);
           currentAccessToken = refreshed.accessToken;
           session.accessToken = currentAccessToken;
+          previousRefreshToken = before;
+          currentRefreshToken = after;
         }
 
-        const after = await cookieValue(request, REFRESH_COOKIE_NAME);
         return {
           response,
           rotated: Boolean(after) && after !== before,
         };
+      },
+      reusePreviousRefresh: async () => {
+        const previous = requireSessionToken(
+          previousRefreshToken,
+          'Previous refresh token is unavailable; rotate the session before testing reuse',
+        );
+        return postRefreshWithExplicitToken(previous);
+      },
+      refreshCurrentAfterReuse: async () => {
+        const current = requireSessionToken(
+          currentRefreshToken,
+          'Current refresh token is unavailable after rotation',
+        );
+        return postRefreshWithExplicitToken(current);
       },
       logout: async () => {
         const response = await api.post('/api/v1/auth/logout', {

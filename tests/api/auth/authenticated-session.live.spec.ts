@@ -1,6 +1,11 @@
 import { expect, test } from '../../../fixtures/authenticated-api.js';
 
 test.use({ trace: 'off' });
+test.describe.configure({ retries: 0 });
+
+type ProblemResponse = {
+  code?: string;
+};
 
 test.describe('Authenticated session lifecycle @api @session @authenticated-live @rate-limited-live @p0', () => {
   test.skip(
@@ -43,6 +48,32 @@ test.describe('Authenticated session lifecycle @api @session @authenticated-live
       const response = await authenticatedSession.logout();
       expect(response.status()).toBe(204);
       expect(await authenticatedSession.hasRefreshCookie()).toBe(false);
+    });
+  });
+
+  test('QA-SES-004/005 | reuso deve revogar toda a família de refresh', async ({
+    authenticatedSession,
+  }) => {
+    await test.step('preparar rotação mantendo os tokens somente em memória', async () => {
+      const rotation = await authenticatedSession.refresh();
+      expect(rotation.response.status()).toBe(200);
+      expect(rotation.rotated).toBe(true);
+    });
+
+    await test.step('QA-SES-004 | reutilizar refresh substituído deve detectar reuso', async () => {
+      const response = await authenticatedSession.reusePreviousRefresh();
+      expect(response.status()).toBe(401);
+
+      const problem = await authenticatedSession.api.json<ProblemResponse>(response);
+      expect(problem.code).toBe('REFRESH_TOKEN_REUSED');
+    });
+
+    await test.step('QA-SES-005 | refresh mais novo também deve falhar após revogação da família', async () => {
+      const response = await authenticatedSession.refreshCurrentAfterReuse();
+      expect(response.status()).toBe(401);
+
+      const problem = await authenticatedSession.api.json<ProblemResponse>(response);
+      expect(problem.code).toBe('REFRESH_TOKEN_INVALID');
     });
   });
 });
