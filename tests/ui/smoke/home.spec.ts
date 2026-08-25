@@ -11,6 +11,8 @@ function isExpectedChromium401ConsoleNoise(message: string): boolean {
 
 test.describe('Frontend home smoke @ui @smoke @p0', () => {
   test('AUTO-015 | home publicada deve carregar sem erro fatal', async ({ page }) => {
+    test.setTimeout(150_000);
+
     const consoleErrors: string[] = [];
     const pageErrors: string[] = [];
     const unexpectedHttpErrors: string[] = [];

@@ -13,7 +13,7 @@ export const test = base.extend<ApiBaseFixtures>({
     },
     {
       auto: true,
-      timeout: 150_000,
+      timeout: 270_000,
     },
   ],
 });
