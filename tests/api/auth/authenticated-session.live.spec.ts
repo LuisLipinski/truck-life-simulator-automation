@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { expect, test } from '../../../fixtures/authenticated-api.js';
 
 test.use({ trace: 'off' });
@@ -81,30 +80,25 @@ test.describe('Authenticated session lifecycle @api @session @authenticated-live
   test('QA-PWD-001/002/003 | alteração autenticada deve manter access atual e revogar refresh', async ({
     authenticatedSession,
   }) => {
-    const temporaryPassword = `Tls-Temporary-${randomUUID()}`;
     let passwordChanged = false;
 
     try {
       await test.step('senha atual incorreta deve ser rejeitada sem alterar a conta', async () => {
-        const response = await authenticatedSession.restoreConfiguredPassword(
-          'wrong current password 2026',
-        );
+        const response = await authenticatedSession.attemptIncorrectCurrentPassword();
         expect(response.status()).toBe(400);
         const problem = await authenticatedSession.api.json<ProblemResponse>(response);
         expect(problem.code).toBe('CURRENT_PASSWORD_INVALID');
       });
 
       await test.step('nova senha fora da política deve ser rejeitada', async () => {
-        const response = await authenticatedSession.changePasswordFromConfiguredPassword('short');
+        const response = await authenticatedSession.attemptInvalidNewPassword();
         expect(response.status()).toBe(400);
         const problem = await authenticatedSession.api.json<ProblemResponse>(response);
         expect(problem.code).toBe('VALIDATION_FAILED');
       });
 
       await test.step('troca válida deve manter o access token atual utilizável', async () => {
-        const response = await authenticatedSession.changePasswordFromConfiguredPassword(
-          temporaryPassword,
-        );
+        const response = await authenticatedSession.changePasswordToTemporary();
         passwordChanged = response.status() === 204;
         expect(response.status()).toBe(204);
         expect(response.headers()['cache-control']).toContain('no-store');
@@ -126,12 +120,12 @@ test.describe('Authenticated session lifecycle @api @session @authenticated-live
         const oldPasswordProblem = await authenticatedSession.api.json<ProblemResponse>(oldPasswordLogin);
         expect(oldPasswordProblem.code).toBe('INVALID_CREDENTIALS');
 
-        const newPasswordLogin = await authenticatedSession.loginWithPassword(temporaryPassword);
+        const newPasswordLogin = await authenticatedSession.loginWithTemporaryPassword();
         expect(newPasswordLogin.status()).toBe(200);
       });
     } finally {
       if (passwordChanged) {
-        const restore = await authenticatedSession.restoreConfiguredPassword(temporaryPassword);
+        const restore = await authenticatedSession.restoreConfiguredPassword();
         expect(restore.status()).toBe(204);
 
         const restoredLogin = await authenticatedSession.loginWithConfiguredPassword();
