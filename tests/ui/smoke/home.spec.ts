@@ -43,6 +43,12 @@ test.describe('Frontend home smoke @ui @smoke @p0', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: 'Truck Life Simulator' }),
     ).toBeVisible();
+
+    await expect(
+      page.locator('html'),
+      'o bootstrap de autenticação deve resolver mesmo após cold start do backend',
+    ).toHaveAttribute('data-auth-resolved', 'true', { timeout: 120_000 });
+
     await expect(page.getByRole('link', { name: 'Entrar' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Criar conta' })).toBeVisible();
 
